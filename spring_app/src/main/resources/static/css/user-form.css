@@ -9,6 +9,7 @@ body{
 }
 .card{
 	opacity: .95;
+	margin-bottom:5%;
 }
 .card-body{
     background-color: #d1d3d6;
