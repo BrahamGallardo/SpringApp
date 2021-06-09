@@ -4,6 +4,8 @@ import com.example.demo.entity.User;
 
 public interface UserService {
 
-	public Iterable getAllUsers();
+	public Iterable<User> getAllUsers();
+	
+	public User createUser(User formUser) throws Exception;
 		
 }
