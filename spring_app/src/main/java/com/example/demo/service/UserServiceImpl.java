@@ -3,6 +3,10 @@ package com.example.demo.service;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.dto.ChangePasswordForm;
@@ -14,6 +18,9 @@ public class UserServiceImpl implements UserService {
 
 	@Autowired
 	UserRepository userRepository;
+	
+	@Autowired
+	BCryptPasswordEncoder bCryptPasswordEncoder;
 
 	public Iterable<User> getAllUsers() {
 		return userRepository.findAll();
@@ -41,6 +48,8 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public User createUser(User user) throws Exception {
 		if (checkUsernameAvailable(user) && checkPasswordValid(user)) {
+			String encodePassword= bCryptPasswordEncoder.encode(user.getPassword());
+			user.setPassword(encodePassword);
 			user = userRepository.save(user);
 		}
 		return user;
@@ -74,6 +83,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
 	public void deleteUser(Long id) throws Exception {
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new Exception("UsernotFound in deleteUser -" + this.getClass().getName()));
@@ -81,13 +91,40 @@ public class UserServiceImpl implements UserService {
 		userRepository.delete(user);
 	}
 
+	public boolean isLoggedUserADMIN() {
+		return loggedUserHasRole("ROLE_ADMIN");
+	}
+
+	public boolean loggedUserHasRole(String role) {
+		Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		UserDetails loggedUser = null;
+		Object roles = null;
+		if (principal instanceof UserDetails) {
+			loggedUser = (UserDetails) principal;
+
+			roles = loggedUser.getAuthorities().stream().filter(x -> role.equals(x.getAuthority())).findFirst()
+					.orElse(null); // loggedUser = null;
+		}
+		return roles != null ? true : false;
+	}
+
 	@Override
 	public User changePassword(ChangePasswordForm form) throws Exception {
-		User user = getUserById(form.getId());
+		
+		User user = userRepository
+				.findById( form.getId() )
+				.orElseThrow(() -> new Exception("UsernotFound in ChangePassword."));
 
-		if (!user.getPassword().equals(form.getCurrentPassword())) {
-			throw new Exception("Current Password invalido.");
+		if( !isLoggedUserADMIN() && form.getCurrentPassword().equals(user.getPassword())) {
+			throw new Exception("Current Password Incorrect.");
 		}
+		
+		
+		//User user = getUserById(form.getId());
+
+//		if (!user.getPassword().equals(form.getCurrentPassword())) {
+//			throw new Exception("Current Password invalido.");
+//		}
 
 		if (user.getPassword().equals(form.getNewPassword())) {
 			throw new Exception("Nuevo debe ser diferente al password actual.");
@@ -97,7 +134,8 @@ public class UserServiceImpl implements UserService {
 			throw new Exception("Nuevo Password y Current Password no coinciden.");
 		}
 
-		user.setPassword(form.getNewPassword());
+		String encodePassword= bCryptPasswordEncoder.encode(form.getNewPassword());
+		user.setPassword(encodePassword);
 		return userRepository.save(user);
 	}
 

@@ -7,7 +7,7 @@ public class ChangePasswordForm {
 
 	@NotNull
 	private Long id;
-
+	
 	@NotBlank(message="Current Password must not be blank")
 	private String currentPassword;
 
@@ -89,5 +89,5 @@ public class ChangePasswordForm {
 		return "ChangePasswordForm [id=" + id + ", currentPassword=" + currentPassword + ", newPassword=" + newPassword
 				+ ", confirmPassword=" + confirmPassword + "]";
 	}
-
+	
 }
