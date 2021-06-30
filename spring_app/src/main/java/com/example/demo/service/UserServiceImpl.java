@@ -4,6 +4,8 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.example.demo.dto.ChangePasswordForm;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
 
@@ -26,10 +28,10 @@ public class UserServiceImpl implements UserService {
 	}
 
 	private boolean checkPasswordValid(User user) throws Exception {
-		if (user.getConfirmPassword()==null || user.getConfirmPassword().isEmpty()) {
+		if (user.getConfirmPassword() == null || user.getConfirmPassword().isEmpty()) {
 			throw new Exception("Campo confirm password esta vacio");
 		}
-		
+
 		if (!user.getPassword().equals(user.getConfirmPassword())) {
 			throw new Exception("Password y Confirm Password no son iguales");
 		}
@@ -69,6 +71,34 @@ public class UserServiceImpl implements UserService {
 		to.setLastName(from.getLastName());
 		to.setEmail(from.getEmail());
 		to.setRoles(from.getRoles());
+	}
+
+	@Override
+	public void deleteUser(Long id) throws Exception {
+		User user = userRepository.findById(id)
+				.orElseThrow(() -> new Exception("UsernotFound in deleteUser -" + this.getClass().getName()));
+
+		userRepository.delete(user);
+	}
+
+	@Override
+	public User changePassword(ChangePasswordForm form) throws Exception {
+		User user = getUserById(form.getId());
+
+		if (!user.getPassword().equals(form.getCurrentPassword())) {
+			throw new Exception("Current Password invalido.");
+		}
+
+		if (user.getPassword().equals(form.getNewPassword())) {
+			throw new Exception("Nuevo debe ser diferente al password actual.");
+		}
+
+		if (!form.getNewPassword().equals(form.getConfirmPassword())) {
+			throw new Exception("Nuevo Password y Current Password no coinciden.");
+		}
+
+		user.setPassword(form.getNewPassword());
+		return userRepository.save(user);
 	}
 
 }
