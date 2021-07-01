@@ -2,11 +2,8 @@
 <form id="userForm" th:object="${userForm}" method="post" class="form" role="form"
 	th:action="${editMode} ?@{/editUser} :@{/userForm}">
 
-	<input class="form-control" type=hidden th:field="${userForm.password}" th:if="${editMode}" >
-	<input class="form-control" type=hidden th:field="${userForm.confirmPassword}" th:if="${editMode}" >
-	<input class="form-control" type=hidden name="password" value="xxxx" th:if="${editMode}" >
-	<input class="form-control" type=hidden name="confirmPassword" value="xxxx" th:if="${editMode}" >
-	<input class="form-control" type="hidden" th:field="${userForm.id}" th:if="${editMode}">
+	<input class="form-control" type=hidden th:field="${userForm.id}"  th:if="${editMode}">
+	<input class="form-control" type=hidden name="password" value="xxxx" th:if="${editMode}">
 
 	<div class="form-group row">
 		<label class="col-lg-3 col-form-label form-control-label">First name</label>
@@ -70,7 +67,7 @@
 	</div>
 	
 	<div class="alert alert-danger text-center" th:if="${formError}" th:text="${formError}">Error Message</div>
-	<div class="alert alert-success text-center d-none" id="formSuccess" th:if="${editMode}" >Success MEssage</div>
+	<div class="alert alert-success text-center d-none" id="formSuccess" th:if="${editMode}" >Success Message</div>
 	
 	
 </form>

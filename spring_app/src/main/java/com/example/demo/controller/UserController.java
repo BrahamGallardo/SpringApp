@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import com.example.demo.Exception.CantChangePass;
+import com.example.demo.Exception.UsernameOrIDNotFound;
 import com.example.demo.dto.ChangePasswordForm;
 import com.example.demo.entity.User;
 import com.example.demo.repository.RoleRepository;
@@ -121,7 +123,7 @@ public class UserController {
 	public String deleteUser(Model model, @PathVariable(name = "id") Long id) {
 		try {
 			userService.deleteUser(id);
-		} catch (Exception e) {
+		} catch (UsernameOrIDNotFound e) {
 			model.addAttribute("deleteError", "The user could not be deleted.");
 		}
 		return getUserForm(model);
@@ -134,10 +136,10 @@ public class UserController {
 				String result = errors.getAllErrors().stream().map(x -> x.getDefaultMessage())
 						.collect(Collectors.joining(""));
 
-				throw new Exception(result);
+				throw new CantChangePass(result);
 			}
 			userService.changePassword(form);
-		} catch (Exception e) {
+		} catch (CantChangePass e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
 		}
 		return ResponseEntity.ok("success");

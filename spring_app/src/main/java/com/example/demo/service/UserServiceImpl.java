@@ -9,6 +9,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.Exception.CantChangePass;
+import com.example.demo.Exception.UsernameOrIDNotFound;
 import com.example.demo.dto.ChangePasswordForm;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
@@ -56,8 +58,8 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public User getUserById(Long id) throws Exception {
-		User user = userRepository.findById(id).orElseThrow(() -> new Exception("El usuario no existe"));
+	public User getUserById(Long id) throws UsernameOrIDNotFound {
+		User user = userRepository.findById(id).orElseThrow(() -> new UsernameOrIDNotFound("El usuario no existe"));
 		return user;
 	}
 
@@ -84,9 +86,9 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	@PreAuthorize("hasAnyRole('ROLE_ADMIN')")
-	public void deleteUser(Long id) throws Exception {
+	public void deleteUser(Long id) throws UsernameOrIDNotFound {
 		User user = userRepository.findById(id)
-				.orElseThrow(() -> new Exception("UsernotFound in deleteUser -" + this.getClass().getName()));
+				.orElseThrow(() -> new UsernameOrIDNotFound("UsernotFound in deleteUser -" + this.getClass().getName()));
 
 		userRepository.delete(user);
 	}
@@ -109,14 +111,14 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public User changePassword(ChangePasswordForm form) throws Exception {
+	public User changePassword(ChangePasswordForm form) throws CantChangePass {
 		
 		User user = userRepository
 				.findById( form.getId() )
-				.orElseThrow(() -> new Exception("UsernotFound in ChangePassword."));
+				.orElseThrow(() -> new CantChangePass("UsernotFound in ChangePassword."));
 
 		if( !isLoggedUserADMIN() && form.getCurrentPassword().equals(user.getPassword())) {
-			throw new Exception("Current Password Incorrect.");
+			throw new CantChangePass("Current Password Incorrect.");
 		}
 		
 		
@@ -127,11 +129,11 @@ public class UserServiceImpl implements UserService {
 //		}
 
 		if (user.getPassword().equals(form.getNewPassword())) {
-			throw new Exception("Nuevo debe ser diferente al password actual.");
+			throw new CantChangePass("Nuevo debe ser diferente al password actual.");
 		}
 
 		if (!form.getNewPassword().equals(form.getConfirmPassword())) {
-			throw new Exception("Nuevo Password y Current Password no coinciden.");
+			throw new CantChangePass("Nuevo Password y Current Password no coinciden.");
 		}
 
 		String encodePassword= bCryptPasswordEncoder.encode(form.getNewPassword());
