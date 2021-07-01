@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-import com.example.demo.Exception.CantChangePass;
+import com.example.demo.Exception.CustomeFieldValidationException;
 import com.example.demo.Exception.UsernameOrIDNotFound;
 import com.example.demo.dto.ChangePasswordForm;
 import com.example.demo.entity.User;
@@ -54,15 +54,24 @@ public class UserController {
 			model.addAttribute("userForm", user);
 			model.addAttribute("formTab", "active");
 		} else {
-			try {// Aca tendras error porque este metodo no existe, pero lo crearemos en la
-					// siguiente seccion.
+			try {
 				userService.createUser(user);
 				model.addAttribute("userForm", new User());
-				model.addAttribute("listTab", "active");
-			} catch (Exception e) {
-				model.addAttribute("formError", e.getMessage());
+				model.addAttribute("listTab","active");
+				
+			}catch (CustomeFieldValidationException cfve) {
+				result.rejectValue(cfve.getFieldName(), null, cfve.getMessage());
 				model.addAttribute("userForm", user);
-				model.addAttribute("formTab", "active");
+				model.addAttribute("formTab","active");
+				model.addAttribute("userList", userService.getAllUsers());
+				model.addAttribute("roles",roleRepository.findAll());
+			}
+			catch (Exception e) {
+				model.addAttribute("formErrorMessage",e.getMessage());
+				model.addAttribute("userForm", user);
+				model.addAttribute("formTab","active");
+				model.addAttribute("userList", userService.getAllUsers());
+				model.addAttribute("roles",roleRepository.findAll());
 			}
 		}
 
@@ -132,17 +141,18 @@ public class UserController {
 	@PostMapping("/editUser/changePassword")
 	public ResponseEntity postEditUseChangePassword(@Valid @RequestBody ChangePasswordForm form, Errors errors) {
 		try {
-			if (errors.hasErrors()) {
-				String result = errors.getAllErrors().stream().map(x -> x.getDefaultMessage())
-						.collect(Collectors.joining(""));
+			if( errors.hasErrors()) {
+				String result = errors.getAllErrors()
+                        .stream().map(x -> x.getDefaultMessage())
+                        .collect(Collectors.joining(""));
 
-				throw new CantChangePass(result);
+				throw new Exception(result);
 			}
 			userService.changePassword(form);
-		} catch (CantChangePass e) {
+		} catch (Exception e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
 		}
-		return ResponseEntity.ok("success");
+		return ResponseEntity.ok("Success");
 	}
 
 }

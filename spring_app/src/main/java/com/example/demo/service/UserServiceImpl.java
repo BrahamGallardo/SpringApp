@@ -9,7 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.example.demo.Exception.CantChangePass;
+import com.example.demo.Exception.CustomeFieldValidationException;
 import com.example.demo.Exception.UsernameOrIDNotFound;
 import com.example.demo.dto.ChangePasswordForm;
 import com.example.demo.entity.User;
@@ -29,20 +29,20 @@ public class UserServiceImpl implements UserService {
 	}
 
 	private boolean checkUsernameAvailable(User user) throws Exception {
-		Optional<User> userFound = userRepository.findByUsername(user.getUsername());
+		Optional userFound = userRepository.findByUsername(user.getUsername());
 		if (userFound.isPresent()) {
-			throw new Exception("Username no disponible");
+			throw new CustomeFieldValidationException("Username no disponible","username");
 		}
 		return true;
 	}
 
 	private boolean checkPasswordValid(User user) throws Exception {
 		if (user.getConfirmPassword() == null || user.getConfirmPassword().isEmpty()) {
-			throw new Exception("Campo confirm password esta vacio");
+			throw new CustomeFieldValidationException("Confirm Password es obligatorio","confirmPassword");
 		}
-
-		if (!user.getPassword().equals(user.getConfirmPassword())) {
-			throw new Exception("Password y Confirm Password no son iguales");
+		
+		if ( !user.getPassword().equals(user.getConfirmPassword())) {
+			throw new CustomeFieldValidationException("Password y Confirm Password no son iguales","password");
 		}
 		return true;
 	}
@@ -93,8 +93,22 @@ public class UserServiceImpl implements UserService {
 		userRepository.delete(user);
 	}
 
-	public boolean isLoggedUserADMIN() {
-		return loggedUserHasRole("ROLE_ADMIN");
+	private boolean isLoggedUserADMIN() {
+		//Obtener el usuario logeado
+		Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		
+		UserDetails loggedUser = null;
+		Object roles = null;
+
+		//Verificar que ese objeto traido de sesion es el usuario
+		if (principal instanceof UserDetails) {
+			loggedUser = (UserDetails) principal;
+
+			roles = loggedUser.getAuthorities().stream()
+					.filter(x -> "ROLE_ADMIN".equals(x.getAuthority())).findFirst()
+					.orElse(null); 
+		}
+		return roles != null ? true : false;
 	}
 
 	public boolean loggedUserHasRole(String role) {
@@ -109,34 +123,44 @@ public class UserServiceImpl implements UserService {
 		}
 		return roles != null ? true : false;
 	}
+	
+	private User getLoggedUser() throws Exception {
+		//Obtener el usuario logeado
+		Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		
+		UserDetails loggedUser = null;
+
+		//Verificar que ese objeto traido de sesion es el usuario
+		if (principal instanceof UserDetails) {
+			loggedUser = (UserDetails) principal;
+		}
+		
+		User myUser = userRepository
+				.findByUsername(loggedUser.getUsername()).orElseThrow(() -> new Exception(""));
+		
+		return myUser;
+	}
 
 	@Override
-	public User changePassword(ChangePasswordForm form) throws CantChangePass {
-		
-		User user = userRepository
-				.findById( form.getId() )
-				.orElseThrow(() -> new CantChangePass("UsernotFound in ChangePassword."));
-
-		if( !isLoggedUserADMIN() && form.getCurrentPassword().equals(user.getPassword())) {
-			throw new CantChangePass("Current Password Incorrect.");
-		}
+	public User changePassword(ChangePasswordForm form) throws Exception {
+		User user = getUserById(form.getId());
 		
 		
-		//User user = getUserById(form.getId());
-
-//		if (!user.getPassword().equals(form.getCurrentPassword())) {
-//			throw new Exception("Current Password invalido.");
-//		}
-
-		if (user.getPassword().equals(form.getNewPassword())) {
-			throw new CantChangePass("Nuevo debe ser diferente al password actual.");
+		if(loggedUserHasRole("ROLE_USER")) {
+			if(!getLoggedUser().getUsername().equals(user.getUsername()) ) {
+				throw new Exception ("Accion invalida");
+			}
 		}
-
-		if (!form.getNewPassword().equals(form.getConfirmPassword())) {
-			throw new CantChangePass("Nuevo Password y Current Password no coinciden.");
+		
+		if( user.getPassword().equals(form.getNewPassword())) {
+			throw new Exception ("Nuevo debe ser diferente al password actual.");
 		}
-
-		String encodePassword= bCryptPasswordEncoder.encode(form.getNewPassword());
+		
+		if( !form.getNewPassword().equals(form.getConfirmPassword())) {
+			throw new Exception ("Nuevo Password y Confirm Password no coinciden.");
+		}
+		
+		String encodePassword = bCryptPasswordEncoder.encode(form.getNewPassword());
 		user.setPassword(encodePassword);
 		return userRepository.save(user);
 	}
