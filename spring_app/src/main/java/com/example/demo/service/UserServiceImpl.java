@@ -66,6 +66,11 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public User updateUser(User fromUser) throws Exception {
 		User toUser = getUserById(fromUser.getId());
+		
+		if(!getLoggedUser().getUsername().equals(toUser.getUsername()) ) {
+			throw new Exception ("Accion invalida. No puedes editar a otro usuario");
+		}
+		
 		mapUser(fromUser, toUser);
 		return userRepository.save(toUser);
 	}
@@ -148,7 +153,7 @@ public class UserServiceImpl implements UserService {
 		
 		if(loggedUserHasRole("ROLE_USER")) {
 			if(!getLoggedUser().getUsername().equals(user.getUsername()) ) {
-				throw new Exception ("Accion invalida");
+				throw new Exception ("Accion invalida. No puedes editar el password de otro usuario");
 			}
 		}
 		
